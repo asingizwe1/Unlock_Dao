@@ -1,5 +1,5 @@
 // src/components/DelegateSection.tsx
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useWeb3React } from '@web3-react/core'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,10 +17,14 @@ import { useToast } from '@/hooks/use-toast'
 import { useDelegate } from '@/hooks/useDelegate'
 import { SelfDelegateOption } from '@/components/SelfDelegateOption'
 import { StewartDropdown } from '@/components/StewartDropdown'
-
+interface HistoryEntry {
+  timestamp: string
+  action: string
+}
 interface DelegateSectionProps {
   walletAddress: string
 }
+
 
 const stewards = [
   {
@@ -61,16 +65,40 @@ const stewards = [
 ]
 
 export const DelegateSection: React.FC<DelegateSectionProps> = ({
+
   walletAddress,
 }) => {
   const { account, active } = useWeb3React()
   const [selectedDelegate, setSelectedDelegate] = useState('')
   const [customAddress, setCustomAddress] = useState('')
   const [delegationCount, setDelegationCount] = useState(1247)
+  // Load history on mount
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [showHistory, setShowHistory] = useState(false);
+  useEffect(() => {
+    const saved = localStorage.getItem('votingHistory');
+    if (saved) setHistory(JSON.parse(saved));
+  }, []);
 
+  // Save history on change
+  useEffect(() => {
+    localStorage.setItem('votingHistory', JSON.stringify(history));
+  }, [history]);
   const { toast } = useToast()
   const { delegateTo, isPending } = useDelegate()
+  const handleDeleteVotingRights = () => {
+    // Simulate deletion logic (replace with actual logic if needed)
+    toast({
+      title: 'Voting Rights Deleted',
+      description: 'Your voting rights have been removed.',
+    });
 
+    // Add to history
+    setHistory(prev => [
+      { timestamp: new Date().toISOString(), action: 'Deleted voting rights' },
+      ...prev,
+    ]);
+  };
   const handleDelegate = async (to: string) => {
     if (!active) {
       toast({ title: 'Wallet not connected', variant: 'destructive' })
@@ -137,11 +165,20 @@ export const DelegateSection: React.FC<DelegateSectionProps> = ({
 
       {/* Delegation Form */}
       <Card className="border-gray-200 shadow-lg">
-        <CardHeader>
-          <CardTitle>Delegate Your Voting Power</CardTitle>
-          <CardDescription>
-            Choose a steward or custom address
-          </CardDescription>
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle>Delegate Your Voting Power</CardTitle>
+            <CardDescription>Choose a steward or custom address</CardDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowHistory(prev => !prev)}
+            className="mt-2 md:mt-0 px-6 border-purple-500 text-purple-700 hover:bg-purple-50 hover:border-purple-600 transition"
+
+          >
+            🕘 History {history.length > 0 && <span className="ml-1 text-blue-600">({history.length})</span>}
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4 p-6">
           <Label>Select a Steward</Label>
@@ -187,7 +224,27 @@ export const DelegateSection: React.FC<DelegateSectionProps> = ({
               </>
             )}
           </Button>
+          <Button
+            variant="outline"
+            onClick={handleDeleteVotingRights}
+            className="w-full"
+          >
+            🗑️ Delete Voting Rights
+          </Button>
         </CardContent>
+        {showHistory && (
+          <div className="mt-4 border p-3 rounded bg-gray-50 text-sm">
+            <p className="font-medium mb-2">Your Deletion History ({history.length})</p>
+            <ul className="space-y-1">
+              {history.map((entry, idx) => (
+                <li key={idx}>
+                  <span className="font-medium text-gray-700">#{idx + 1}</span> — 🗑️ {entry.action} at{" "}
+                  {new Date(entry.timestamp).toLocaleString()}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Card>
     </div>
   )
