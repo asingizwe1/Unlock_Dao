@@ -1,0 +1,41 @@
+// pages/api/delegate-recommendation.ts
+import type { NextApiRequest, NextApiResponse } from "next";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
+
+export default async function handler(
+    req: NextApiRequest,
+    res: NextApiResponse
+) {
+    if (req.method !== "POST") {
+        return res.status(405).json({ error: "Only POST allowed" });
+    }
+
+    const { voterAddress } = req.body as { voterAddress?: string };
+    if (!voterAddress) {
+        return res.status(400).json({ error: "Missing voterAddress in body" });
+    }
+
+    try {
+        const prompt = `You are a DAO governance assistant.
+Recommend 3 delegates for the user with address ${voterAddress}.
+Give their ENS or address and a one-sentence rationale each.`;
+
+        const completion = await openai.completions.create({
+            model: "text-davinci-003",
+            prompt,
+            max_tokens: 200,
+            temperature: 0.7,
+        });
+
+        const recommendation = completion.choices?.[0]?.text?.trim() ?? "";
+
+        return res.status(200).json({ recommendation });
+    } catch (err: any) {
+        console.error("AI recommendation error:", err);
+        return res.status(500).json({ error: err.message });
+    }
+}
