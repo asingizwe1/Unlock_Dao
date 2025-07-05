@@ -20,7 +20,10 @@ import { StewartDropdown } from '@/components/StewartDropdown'
 interface HistoryEntry {
   timestamp: string
   action: string
+  target?: string // for delegation target address
 }
+
+
 interface DelegateSectionProps {
   walletAddress: string
 }
@@ -115,6 +118,14 @@ export const DelegateSection: React.FC<DelegateSectionProps> = ({
         title: 'Delegation Successful',
         description: `You delegated to ${to.slice(0, 6)}…${to.slice(-4)}`,
       })
+      setHistory(prev => [
+        {
+          timestamp: new Date().toISOString(),
+          action: 'Delegated voting rights',
+          target: to,
+        },
+        ...prev,
+      ])
     } catch (err: any) {
       toast({
         title: 'Delegation Failed',
@@ -233,16 +244,41 @@ export const DelegateSection: React.FC<DelegateSectionProps> = ({
           </Button>
         </CardContent>
         {showHistory && (
-          <div className="mt-4 border p-3 rounded bg-gray-50 text-sm">
-            <p className="font-medium mb-2">Your Deletion History ({history.length})</p>
-            <ul className="space-y-1">
-              {history.map((entry, idx) => (
-                <li key={idx}>
-                  <span className="font-medium text-gray-700">#{idx + 1}</span> — 🗑️ {entry.action} at{" "}
-                  {new Date(entry.timestamp).toLocaleString()}
-                </li>
-              ))}
-            </ul>
+          <div className="mt-4 border p-3 rounded bg-gray-50 text-sm space-y-4">
+            {/* Delegation History */}
+            <div>
+              <p className="font-medium mb-2">
+                Your Delegation History ({history.filter(h => h.action === 'Delegated voting rights').length})
+              </p>
+              <ul className="space-y-1">
+                {history
+                  .filter(h => h.action === 'Delegated voting rights')
+                  .map((entry, idx) => (
+                    <li key={idx}>
+                      <span className="font-medium text-gray-700">#{idx + 1}</span> — ✅ Delegated to{" "}
+                      <code className="text-purple-700">{entry.target?.slice(0, 6)}…{entry.target?.slice(-4)}</code> at{" "}
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+
+            {/* Deletion History */}
+            <div>
+              <p className="font-medium mb-2">
+                Your Deletion History ({history.filter(h => h.action === 'Deleted voting rights').length})
+              </p>
+              <ul className="space-y-1">
+                {history
+                  .filter(h => h.action === 'Deleted voting rights')
+                  .map((entry, idx) => (
+                    <li key={idx}>
+                      <span className="font-medium text-gray-700">#{idx + 1}</span> — 🗑️ {entry.action} at{" "}
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </li>
+                  ))}
+              </ul>
+            </div>
           </div>
         )}
       </Card>
